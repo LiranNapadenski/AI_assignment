@@ -1,64 +1,51 @@
 import tkinter as tk
-import requests
-import tempfile
-import os
-from tkinter import scrolledtext
+from tkinter import messagebox
 import cv2
 from PIL import Image, ImageTk
+from BackEnd import text_to_video
 
-# Function to send story to Flask and receive video
-def send_story():
-    story = text_box.get("1.0", tk.END).strip()
-    if not story:
-        status_label.config(text="Please enter a story")
+
+def send_text():
+    text = text_input.get("1.0", tk.END).strip()
+    if not text:
+        messagebox.showerror("Error", "Please enter a story.")
         return
+    
+    video_path = text_to_video(text)
+    show_video(video_path)
 
-    status_label.config(text="Processing...")
-    try:
-        response = requests.post("http://127.0.0.1:5000/process_story", json={"story": story}, stream=True)
-
-        if response.status_code == 200:
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-            with open(temp_file.name, "wb") as f:
-                for chunk in response.iter_content(chunk_size=1024):
-                    f.write(chunk)
-
-            status_label.config(text="Video received! Playing...")
-            play_video(temp_file.name)
-        else:
-            status_label.config(text="Error: " + response.json().get("error", "Unknown error"))
-
-    except Exception as e:
-        status_label.config(text=f"Error: {e}")
-
-# Function to play video in OpenCV window
-def play_video(video_path):
+def show_video(video_path):
     cap = cv2.VideoCapture(video_path)
-
-    while cap.isOpened():
+    
+    def update_frame():
         ret, frame = cap.read()
-        if not ret:
-            break
-        cv2.imshow('Generated Video', frame)
-        if cv2.waitKey(25) & 0xFF == ord('q'):
-            break
+        if ret:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(frame)
+            img = ImageTk.PhotoImage(img)
+            video_label.config(image=img)
+            video_label.image = img
+            video_label.after(30, update_frame)
+        else:
+            cap.release()
+    
+    update_frame()
 
-    cap.release()
-    cv2.destroyAllWindows()
-
-# Tkinter GUI setup
+# Create GUI window
 root = tk.Tk()
-root.title("Story to Video")
-root.geometry("500x400")
+root.title("Text to Video Generator")
+root.geometry("600x400")
 
-tk.Label(root, text="Enter your story:").pack(pady=5)
-text_box = scrolledtext.ScrolledText(root, width=50, height=10)
-text_box.pack(pady=5)
+# Text input field
+text_input = tk.Text(root, height=5, width=50)
+text_input.pack(pady=10)
 
-send_button = tk.Button(root, text="Generate Video", command=send_story)
-send_button.pack(pady=10)
+# Submit button
+submit_button = tk.Button(root, text="Generate Video", command=send_text)
+submit_button.pack(pady=5)
 
-status_label = tk.Label(root, text="")
-status_label.pack()
+# Video display label
+video_label = tk.Label(root)
+video_label.pack()
 
 root.mainloop()
