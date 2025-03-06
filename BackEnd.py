@@ -16,16 +16,19 @@ if torch.cuda.is_available():
     image_pipe.to("cuda") #Move the image pipeline to GPU
 
 output_video = "output_video.mp4"
-fps = 1/3
-width = 480
-height = 800
+fps = 1/5
+width = 800
+height = 480
 
 def text_to_video(text):
     prompt = """
-        Split the following text into short sentences
-        such that each sentence can be understood independently:\n\n
+        Split the following text into very short sentences
+        such that each sentence can be understood independently
+        and an image generator can understand them
+        Ensure that sentences are meaningful
+        use the whole text:\n\n
     """ + text
-    captions = text_pipe(prompt, max_length=4096)[0]["generated_text"].split(". ")
+    captions = text_pipe(prompt, max_length=32768)[0]["generated_text"].replace(",", ".").split(". ")
     print(captions)
 
     images = list(map(lambda x: image_pipe(x.strip(), width=width, height=height).images[0], captions))
