@@ -1,11 +1,19 @@
+import tkinter as tk
+from tkinter import messagebox
+import cv2
+from PIL import Image, ImageTk
+import numpy as np
 from transformers import pipeline
 from diffusers import DiffusionPipeline
-from PIL import ImageFont, ImageDraw
-import cv2
-import numpy as np
+from PIL import ImageFont, ImageDraw, Image
+import os
+import torch
 
 text_pipe = pipeline("text2text-generation", model="google/flan-t5-large")
 image_pipe = DiffusionPipeline.from_pretrained("stabilityai/sd-turbo")
+
+if torch.cuda.is_available():
+    image_pipe.to("cuda") #Move the image pipeline to GPU
 
 output_video = "output_video.mp4"
 fps = 1/3
